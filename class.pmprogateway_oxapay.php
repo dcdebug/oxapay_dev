@@ -1,10 +1,10 @@
 <?php
 /*
-Plugin Name:A PMPro OxaPay Gateway Customized by TiaBTC
+Plugin Name:A PMPro OxaPay Gateway Customized
 Plugin URI: https://OxaPay.com
 Description: OxaPay Payment Gateway integration for Paid Memberships Pro.
 Version: 1.0
-Author: OxaPay.com
+Author: ethanwong.online
 Author URI: https://OxaPay.com
 */
 // 確保 PMP 相關的 class 和 function 存在
