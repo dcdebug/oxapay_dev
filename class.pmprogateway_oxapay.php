@@ -147,11 +147,12 @@ class PMProGateway_oxapay extends PMProGateway
      */
     function process(&$order)
     {
+
+        //$order->getLastMemberOrder(NULL,"review");
         $code = $order->code;
         $initial_payment = $order->InitialPayment;
         $initial_payment_tax = $order->getTaxForPrice($initial_payment);
         $initial_payment = round((float)$initial_payment + (float)$initial_payment_tax, 2);
-
         $data = array(
             'merchant'    => pmpro_getOption("oxapay_merchant_id"),
             'amount'      => floatval($initial_payment),
@@ -163,6 +164,7 @@ class PMProGateway_oxapay extends PMProGateway
             'returnUrl' => trailingslashit(home_url()) . "membership-account/membership-invoice/?invoice=$code&"
         );
         $url = 'https://api.oxapay.com/merchants/request';
+
         $options = array(
             'http' => array(
                 'header' => 'Content-Type: application/json',
@@ -172,7 +174,9 @@ class PMProGateway_oxapay extends PMProGateway
         );
         $context  = stream_context_create($options);
         $response = file_get_contents($url, false, $context);
+
         $result = json_decode($response);
+
         if (is_wp_error($response)) {
             $message = __('Erorr', 'oxapay-payment-for-pmmp') . ' : ' . $result->get_error_message();
             $order->error = $message;
@@ -212,8 +216,14 @@ class PMProGateway_oxapay extends PMProGateway
         return $result;
     }
 
+    /**
+     * Process the IPN (Instant Payment Notification) from OxaPay
+     * 
+     * @return void
+     */
     public static function process_ipn()
     {
+        global $wpdb;
         $postData = file_get_contents('php://input');
         $data = json_decode($postData, true);
         $apiSecretKey = pmpro_getOption("oxapay_merchant_id");
@@ -226,11 +236,44 @@ class PMProGateway_oxapay extends PMProGateway
             $status = self::convertToWPStatus($data['status']);
             $morder->status = $status;
             $morder->saveOrder();
+
+            $pmpro_level = $wpdb->get_row("SELECT * FROM $wpdb->pmpro_membership_levels WHERE id = '" . (int)$morder->membership_id . "' LIMIT 1");
+
             if ($status == 'success') {
                 //过期shijian
                 $user_id = $morder->user_id;
-                $level_id = $morder->membership_id;
-                pmpro_changeMembershipLevel($level_id, $user_id);
+                //$level_id = $morder->membership_id;
+                $old_startdate = current_time('timestamp');
+                $old_enddate = current_time('timestamp');
+
+                $active_levels = pmpro_getMembershipLevelsForUser($user_id);
+                if (is_array($active_levels))
+                    foreach ($active_levels as $row) {
+                        if ($row->id == $pmpro_level->id && $row->enddate > current_time('timestamp')) {
+                            $old_startdate = $row->startdate;
+                            $old_enddate   = $row->enddate;
+                        }
+                    }
+
+                // subscription start/end
+                $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
+                $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
+
+                $custom_level = array(
+                    'user_id'             => $user_id,
+                    'membership_id'     => $pmpro_level->id,
+                    'code_id'             => '',
+                    'initial_payment'     => $pmpro_level->initial_payment,
+                    'billing_amount'     => $pmpro_level->billing_amount,
+                    'cycle_number'         => $pmpro_level->cycle_number,
+                    'cycle_period'         => $pmpro_level->cycle_period,
+                    'billing_limit'     => $pmpro_level->billing_limit,
+                    'trial_amount'         => $pmpro_level->trial_amount,
+                    'trial_limit'         => $pmpro_level->trial_limit,
+                    'startdate'         => $startdate,
+                    'enddate'             => $enddate
+                );
+                pmpro_changeMembershipLevel($custom_level, $user_id, "changed");
             }
             http_response_code(200);
             echo 'OK';
