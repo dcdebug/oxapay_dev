@@ -237,7 +237,8 @@ class PMProGateway_oxapay extends PMProGateway
             $morder->status = $status;
             $morder->saveOrder();
 
-            $pmpro_level = $wpdb->get_row("SELECT * FROM $wpdb->pmpro_membership_levels WHERE id = '" . (int)$morder->membership_id . "' LIMIT 1");
+            $SQL  = "SELECT * FROM $wpdb->pmpro_membership_levels WHERE id = '" . (int)$morder->membership_id . "' LIMIT 1";
+            $pmpro_level = $wpdb->get_row($SQL);
 
             if ($status == 'success') {
                 //过期shijian
@@ -257,7 +258,8 @@ class PMProGateway_oxapay extends PMProGateway
 
                 // subscription start/end
                 $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
-                $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
+                //$enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
+                $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : date("Y-m-d H:i:s", strtotime("+1 month", $old_startdate));
 
                 $custom_level = array(
                     'user_id'             => $user_id,
@@ -273,7 +275,7 @@ class PMProGateway_oxapay extends PMProGateway
                     'startdate'         => $startdate,
                     'enddate'             => $enddate
                 );
-                pmpro_changeMembershipLevel($custom_level, $user_id, "changed");
+                pmpro_changeMembershipLevel($custom_level, $user_id, "active");
             }
             http_response_code(200);
             echo 'OK';
