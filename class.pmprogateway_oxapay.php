@@ -26,6 +26,11 @@ class PMProGateway_oxapay extends PMProGateway
 {
     function __construct($gateway = NULL)
     {
+        $pageObject = get_queried_object();
+
+        if ($pageObject->post_name != 'membership-checkout') {
+            return;
+        }
         global $wpdb;
         $user_id = get_current_user_id();
 
@@ -34,7 +39,7 @@ class PMProGateway_oxapay extends PMProGateway
         $old_enddate = current_time('timestamp');
 
         $SQL  = "SELECT * FROM $wpdb->pmpro_membership_levels WHERE id = 1 LIMIT 1";
-        //echo $SQL;
+
 
         $pmpro_level = $wpdb->get_row($SQL);
 
@@ -51,14 +56,14 @@ class PMProGateway_oxapay extends PMProGateway
                 }
             }
         // echo "<Pre>";
-        // var_dump("old_startdate:" . date("Y-m-d H:i:s", $old_startdate));
-        // var_dump("old_enddate:" . date("Y-m-d H:i:s", $old_enddate));
+        //  var_dump("old_startdate:" . date("Y-m-d H:i:s", $old_startdate));
+        //  var_dump("old_enddate:" . date("Y-m-d H:i:s", $old_enddate));
         echo "<pre>";
         //var_dump($pmpro_level, $old_startdate, $old_enddate, $active_levels);
-        // subscription start/end
-        $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
+        // subscription start/end 不需要訂閱功能
+        $startdate = "'" . date("Y-m-d H:i:s", $old_enddate) . "'";
         //$enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
-        $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : date("Y-m-d H:i:s", strtotime("+1 month", $old_startdate));
+        $enddate = date("Y-m-d H:i:s", strtotime("+1 month", $old_enddate));
 
         $custom_level = array(
             'user_id'             => $user_id,
@@ -76,7 +81,7 @@ class PMProGateway_oxapay extends PMProGateway
         );
         echo "<pre>";
         var_dump($custom_level);
-        pmpro_changeMembershipLevel($custom_level, $user_id, "active");
+        //pmpro_changeMembershipLevel($custom_level, $user_id, "active");
         die;
         $this->gateway = $gateway;
         return $this->gateway;
@@ -308,10 +313,13 @@ class PMProGateway_oxapay extends PMProGateway
                         }
                     }
 
-                // subscription start/end
-                $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
+                // subscription start/end加密货币不需要订阅
+                // $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
+                // //$enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
+                // $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : date("Y-m-d H:i:s", strtotime("+1 month", $old_startdate));
+                $startdate = "'" . date("Y-m-d H:i:s", $old_enddate) . "'";
                 //$enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
-                $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : date("Y-m-d H:i:s", strtotime("+1 month", $old_startdate));
+                $enddate = date("Y-m-d H:i:s", strtotime("+1 month", $old_enddate));
 
                 $custom_level = array(
                     'user_id'             => $user_id,
