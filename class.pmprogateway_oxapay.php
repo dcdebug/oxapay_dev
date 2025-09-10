@@ -26,6 +26,58 @@ class PMProGateway_oxapay extends PMProGateway
 {
     function __construct($gateway = NULL)
     {
+        global $wpdb;
+        $user_id = get_current_user_id();
+
+        //$level_id = $morder->membership_id;
+        $old_startdate = current_time('timestamp');
+        $old_enddate = current_time('timestamp');
+
+        $SQL  = "SELECT * FROM $wpdb->pmpro_membership_levels WHERE id = 1 LIMIT 1";
+        //echo $SQL;
+
+        $pmpro_level = $wpdb->get_row($SQL);
+
+        $active_levels = pmpro_getMembershipLevelsForUser($user_id);
+
+        if (is_array($active_levels))
+            foreach ($active_levels as $row) {
+                var_dump(date("Y-m-d H:i:s", $row->enddate));
+                var_dump(date("Y-m-d H:i:s", $row->startdate));
+
+                if ($row->id == $pmpro_level->id && $row->enddate > current_time('timestamp')) {
+                    $old_startdate = $row->startdate;
+                    $old_enddate   = $row->enddate;
+                }
+            }
+        // echo "<Pre>";
+        // var_dump("old_startdate:" . date("Y-m-d H:i:s", $old_startdate));
+        // var_dump("old_enddate:" . date("Y-m-d H:i:s", $old_enddate));
+        echo "<pre>";
+        //var_dump($pmpro_level, $old_startdate, $old_enddate, $active_levels);
+        // subscription start/end
+        $startdate = "'" . date("Y-m-d H:i:s", $old_startdate) . "'";
+        //$enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : "NULL";
+        $enddate = (!empty($pmpro_level->expiration_number)) ? "'" . date("Y-m-d H:i:s", strtotime("+ " . $pmpro_level->expiration_number . " " . $pmpro_level->expiration_period, $old_enddate)) . "'" : date("Y-m-d H:i:s", strtotime("+1 month", $old_startdate));
+
+        $custom_level = array(
+            'user_id'             => $user_id,
+            'membership_id'     => $pmpro_level->id,
+            'code_id'             => '',
+            'initial_payment'     => $pmpro_level->initial_payment,
+            'billing_amount'     => $pmpro_level->billing_amount,
+            'cycle_number'         => $pmpro_level->cycle_number,
+            'cycle_period'         => $pmpro_level->cycle_period,
+            'billing_limit'     => $pmpro_level->billing_limit,
+            'trial_amount'         => $pmpro_level->trial_amount,
+            'trial_limit'         => $pmpro_level->trial_limit,
+            'startdate'         => $startdate,
+            'enddate'             => $enddate
+        );
+        echo "<pre>";
+        var_dump($custom_level);
+        pmpro_changeMembershipLevel($custom_level, $user_id, "active");
+        die;
         $this->gateway = $gateway;
         return $this->gateway;
     }
